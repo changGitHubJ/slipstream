@@ -1,16 +1,21 @@
 import numpy as np
 
-from catch_ball import CatchBall
+#from catch_ball import CatchBall
+from slipstream import Slipstream
 from dqn_agent import DQNAgent
 
 
 if __name__ == "__main__":
     # parameters
-    n_epochs = 1000
+    n_epochs = 5000
 
     # environment, agent
-    env = CatchBall()
-    agent = DQNAgent(env.enable_actions, env.name)
+    input_size = np.zeros(2, dtype=np.int32)
+    input_size[0] = 16
+    input_size[1] = 16
+    #env = CatchBall(input_size)
+    env = Slipstream(input_size)
+    agent = DQNAgent(env.enable_actions, env.name, input_size)
 
     # variables
     win = 0

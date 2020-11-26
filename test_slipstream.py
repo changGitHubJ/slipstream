@@ -1,3 +1,4 @@
+import numpy as np
 
 from dqn_agent import DQNAgent
 from slipstream import Slipstream
@@ -19,12 +20,15 @@ def animate(step):
         env.execute_action(action_t)
 
     # observe environment
-    state_t_1, reward_t, terminal = env.observe()
+    state_t_1, reward_t, terminal = env.observe(debug=True)
 
 if __name__ == "__main__":
     # environmet, agent
-    env = Slipstream()
-    agent = DQNAgent(env.enable_actions, env.name)
+    input_size = np.zeros(2, dtype=np.int32)
+    input_size[0] = 8
+    input_size[1] = 8
+    env = Slipstream(input_size)
+    agent = DQNAgent(env.enable_actions, env.name, input_size)
     agent.load_model()
 
     # variables

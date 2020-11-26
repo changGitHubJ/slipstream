@@ -3,11 +3,11 @@ import numpy as np
 
 
 class CatchBall:
-    def __init__(self):
+    def __init__(self, input_size):
         # parameters
         self.name = os.path.splitext(os.path.basename(__file__))[0]
-        self.screen_n_rows = 8
-        self.screen_n_cols = 8
+        self.screen_n_rows = input_size[0]
+        self.screen_n_cols = input_size[1]
         self.player_length = 3
         self.enable_actions = (0, 1, 2)
         self.frame_rate = 5

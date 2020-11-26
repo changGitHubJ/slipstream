@@ -10,7 +10,7 @@ class DQNAgent:
     Multi Layer Perceptron with Experience Replay
     """
 
-    def __init__(self, enable_actions, environment_name):
+    def __init__(self, enable_actions, environment_name, input_size):
         # parameters
         self.name = os.path.splitext(os.path.basename(__file__))[0]
         self.environment_name = environment_name
@@ -28,25 +28,26 @@ class DQNAgent:
         self.D = deque(maxlen=self.replay_memory_size)
 
         # model
-        self.init_model()
+        self.init_model(input_size)
 
         # variables
         self.current_loss = 0.0
 
-    def init_model(self):
+    def init_model(self, input_size):
         # input layer (8 x 8)
-        self.x = tf.placeholder(tf.float32, [None, 8, 8])
+        self.x = tf.placeholder(tf.float32, [None, input_size[0], input_size[1]])
 
         # flatten (64)
-        x_flat = tf.reshape(self.x, [-1, 64])
+        flatten_size = input_size[0]*input_size[1]
+        x_flat = tf.reshape(self.x, [-1, flatten_size])
 
         # fully connected layer (32)
-        W_fc1 = tf.Variable(tf.truncated_normal([64, 64], stddev=0.01))
-        b_fc1 = tf.Variable(tf.zeros([64]))
+        W_fc1 = tf.Variable(tf.truncated_normal([flatten_size, flatten_size], stddev=0.01))
+        b_fc1 = tf.Variable(tf.zeros([flatten_size]))
         h_fc1 = tf.nn.relu(tf.matmul(x_flat, W_fc1) + b_fc1)
 
         # output layer (n_actions)
-        W_out = tf.Variable(tf.truncated_normal([64, self.n_actions], stddev=0.01))
+        W_out = tf.Variable(tf.truncated_normal([flatten_size, self.n_actions], stddev=0.01))
         b_out = tf.Variable(tf.zeros([self.n_actions]))
         self.y = tf.matmul(h_fc1, W_out) + b_out
 
