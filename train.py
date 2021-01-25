@@ -1,25 +1,19 @@
 import numpy as np
 
-#from catch_ball import CatchBall
 from slipstream import Slipstream
 from dqn_agent import DQNAgent
 
-
 if __name__ == "__main__":
     # parameters
-    n_epochs = 5000
+    n_epochs = 20000
 
     # environment, agent
-    input_size = np.zeros(2, dtype=np.int32)
-    input_size[0] = 16
-    input_size[1] = 16
-    #env = CatchBall(input_size)
-    env = Slipstream(input_size)
-    agent = DQNAgent(env.enable_actions, env.name, input_size)
+    env = Slipstream(plot=False)
+    agent = DQNAgent(env.enable_actions, [env.screen_n_cols, env.screen_n_rows, env.max_time], env.name)
+    agent.compile()
 
-    # variables
+    training_log = []
     win = 0
-
     for e in range(n_epochs):
         # reset
         frame = 0
@@ -32,27 +26,35 @@ if __name__ == "__main__":
             state_t = state_t_1
 
             # execute action in environment
-            action_t = agent.select_action(state_t, agent.exploration)
-            env.execute_action(action_t)
+            action_t = agent.select_action(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), agent.exploration)
+            env.step(action_t)
 
             # observe environment
             state_t_1, reward_t, terminal = env.observe()
 
             # store experience
-            agent.store_experience(state_t, action_t, reward_t, state_t_1, terminal)
+            agent.store_experience(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), action_t, reward_t, state_t_1.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), terminal)
 
-            # experience replay
-            agent.experience_replay()
+            if terminal:
+                # experience replay
+                agent.experience_replay()
 
             # for log
             frame += 1
             loss += agent.current_loss
-            Q_max += np.max(agent.Q_values(state_t))
-            if reward_t == 1:
-                win += 1
-
-        print("EPOCH: {:03d}/{:03d} | WIN: {:03d} | LOSS: {:.4f} | Q_MAX: {:.4f}".format(
-            e, n_epochs - 1, win, loss / frame, Q_max / frame))
+            Q_max += np.max(agent.Q_values(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time)))
+            
+        REWARD = reward_t
+        if REWARD > 0:
+            win += 1
+        msg = "EPOCH: {:03d}/{:03d} | REWARD: {:03d} | WIN(p): {:.3f} | LOSS: {:.4f} | Q_MAX: {:.4f}".format(e, n_epochs - 1, REWARD, win / (e + 1), loss / frame, Q_max / frame)
+        print(msg)
+        training_log.append(msg + "\n")
 
     # save model
     agent.save_model()
+
+    # save log
+    with open("./training_log.txt", "w") as f:
+        for log in training_log:
+            f.write(log)
