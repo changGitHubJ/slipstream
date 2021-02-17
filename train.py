@@ -1,16 +1,19 @@
 import numpy as np
+import sys
 
 from slipstream import Slipstream
 from dqn_agent import DQNAgent
 
-if __name__ == "__main__":
+def main(trial):
     # parameters
     n_epochs = 20000
 
     # environment, agent
     env = Slipstream(plot=False)
-    agent = DQNAgent(env.enable_actions, [env.screen_n_cols, env.screen_n_rows, env.max_time], env.name)
-    agent.compile()
+    agentP = DQNAgent(env.enable_actions, [env.screen_n_cols, env.screen_n_rows, env.max_time], env.name, "modelPlayer" + str(trial))
+    agentP.compile()
+    agentC = DQNAgent(env.enable_actions, [env.screen_n_cols, env.screen_n_rows, env.max_time], env.name, "modelCompetitor" + str(trial))
+    agentC.compile()
 
     training_log = []
     win = 0
@@ -20,31 +23,34 @@ if __name__ == "__main__":
         loss = 0.0
         Q_max = 0.0
         env.reset()
-        state_t_1, reward_t, terminal = env.observe()
+        state_t_1, reward_tP, reward_tC, terminal = env.observe()
 
         while not terminal:
             state_t = state_t_1
 
             # execute action in environment
-            action_t = agent.select_action(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), agent.exploration)
-            env.step(action_t)
+            action_tP = agentP.select_action(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), agentP.exploration)
+            action_tC = agentC.select_action(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), agentC.exploration)
+            env.step(action_tP, action_tC)
 
             # observe environment
-            state_t_1, reward_t, terminal = env.observe()
+            state_t_1, reward_tP, reward_tC, terminal = env.observe()
 
             # store experience
-            agent.store_experience(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), action_t, reward_t, state_t_1.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), terminal)
+            agentP.store_experience(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), action_tP, reward_tP, state_t_1.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), terminal)
+            agentC.store_experience(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), action_tC, reward_tC, state_t_1.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time), terminal)
 
             if terminal:
                 # experience replay
-                agent.experience_replay()
+                agentP.experience_replay()
+                agentC.experience_replay()
 
             # for log
             frame += 1
-            loss += agent.current_loss
-            Q_max += np.max(agent.Q_values(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time)))
+            loss += agentP.current_loss
+            Q_max += np.max(agentP.Q_values(state_t.reshape(env.screen_n_cols*env.screen_n_rows*env.max_time)))
             
-        REWARD = reward_t
+        REWARD = reward_tP
         if REWARD > 0:
             win += 1
         msg = "EPOCH: {:03d}/{:03d} | REWARD: {:03d} | WIN(p): {:.3f} | LOSS: {:.4f} | Q_MAX: {:.4f}".format(e, n_epochs - 1, REWARD, win / (e + 1), loss / frame, Q_max / frame)
@@ -52,9 +58,18 @@ if __name__ == "__main__":
         training_log.append(msg + "\n")
 
     # save model
-    agent.save_model()
+    agentP.save_model()
+    agentC.save_model()
 
     # save log
-    with open("./training_log.txt", "w") as f:
+    with open("./training_log" + str(trial) + ".txt", "w") as f:
         for log in training_log:
             f.write(log)
+
+if __name__ == "__main__":
+    args = sys.argv
+    trial = int(args[1])
+
+    #trial = 0
+    main(trial)
+    

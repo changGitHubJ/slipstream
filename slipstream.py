@@ -12,7 +12,7 @@ class Slipstream:
         self.field_n_rows = 32
         self.field_n_cols = 8
         self.screen_n_rows = self.field_n_rows
-        self.screen_n_cols = self.field_n_cols + 1
+        self.screen_n_cols = self.field_n_cols + 2
         self.max_time = 32
         self.enable_actions = (0, 1, 2, 3)
         # self.frame_rate = 2
@@ -27,7 +27,7 @@ class Slipstream:
             self.fig = plt.figure()
         self.img_cnt = 0
 
-    def update(self, action):
+    def update(self, actionP, actionC):
         """
         action:
             0: dash
@@ -36,7 +36,7 @@ class Slipstream:
             3: move right
         """
         # update player position
-        if action == self.enable_actions[0]: # dash
+        if actionP == self.enable_actions[0]: # dash
             if self.player_energy > 0:
                 self.player_row += 2
                 self.player_energy -= 1
@@ -44,49 +44,59 @@ class Slipstream:
             else: # no leg
                 self.player_row += 1
             self.player_col = self.player_col
-        elif action == self.enable_actions[1]: # move left
-            self.player_row += 1
-            if self.player_col > 1:
+        elif actionP == self.enable_actions[1]: # move left
+            if self.player_col == 0:
+                self.player_row += 1
+                self.player_col = self.field_n_cols - 2
+            elif self.player_col == 1:
+                self.player_row += 1
+                self.player_col = self.field_n_cols - 1
+            else: # self.player_col >= 2:
+                self.player_row += 1
                 self.player_col -= 2
-            else:
-                self.player_col = 0
-        elif action == self.enable_actions[2]: # go straight
+        elif actionP == self.enable_actions[2]: # go straight
             self.player_row += 1
             self.player_col = self.player_col
-        elif action == self.enable_actions[3]: # move right
-            self.player_row += 1
-            if self.player_col < self.field_n_cols - 2:
-                self.player_col += 2
-            else:
-                self.player_col = self.field_n_cols - 1
+        elif actionP == self.enable_actions[3]: # move right
+            if self.player_col == self.field_n_cols - 1:
+                self.player_row += 1
+                self.player_col = 1
+            elif self.player_col == self.field_n_cols - 2:
+                self.player_row += 1
+                self.player_col = 0
+            else: # self.player_col <= self.field_n_cols - 3:
+                self.player_row += 1
+                self.player_col += 2 
         else:
             # do nothing
             pass
 
         # update competitor position
-        act_c = random.randint(0, 3)
-        if act_c == 0: # dash
+        if actionC == 0: # dash
             if self.comptr_energy > 0:
                 self.comptr_row += 2
                 self.comptr_energy -= 1
             else: # no leg
                 self.comptr_row += 1
             self.comptr_col = self.comptr_col
-        elif act_c == 1: # move left
-            self.comptr_row += 1
-            if self.comptr_col > 0:
+        elif actionC == 1: # move left
+            if self.comptr_col == 0:
+                self.comptr_row += 1
+                self.comptr_col = self.field_n_cols - 1
+            else: # self.comptr_col > 0:
+                self.comptr_row += 1
                 self.comptr_col -= 1
-            else:
-                self.comptr_col = 0
-        elif act_c == 2: # go straight
+        elif actionC == 2: # go straight
             self.comptr_row += 1
             self.comptr_col = self.comptr_col
-        elif act_c == 3: # move right
-            self.comptr_row += 1
-            if self.comptr_col < self.field_n_cols - 1:
+        elif actionC == 3: # move right
+            if self.comptr_col == self.field_n_cols - 1:
+                self.comptr_row += 1
+                self.comptr_col = 0
+            else: # self.comptr_col < self.field_n_cols - 1
+                self.comptr_row += 1
                 self.comptr_col += 1
-            else:
-                self.comptr_col = self.field_n_cols - 1
+            
         else:
             # do nothing
             pass
@@ -98,23 +108,33 @@ class Slipstream:
         elif self.player_row == self.comptr_row - 2 and abs(self.player_col - self.comptr_col) <= 1:
             self.player_energy += 1
             print("recover 1")
+        if self.comptr_row == self.player_row - 1 and abs(self.comptr_col - self.player_col) <= 1:
+            self.comptr_energy += 2
+        elif self.comptr_row == self.player_row - 2 and abs(self.comptr_col - self.player_col) <= 1:
+            self.comptr_energy += 1
 
         # collision detection
         self.reward = 0
         self.terminal = False
         if self.player_row >= self.field_n_rows - 1 or self.comptr_row >= self.field_n_rows - 1:
             self.terminal = True
-            if self.player_row > self.comptr_row:
-                # win
-                self.reward = 1
-                #self.reward = self.player_row - self.comptr_row
-            else:
-                # defeated
-                self.reward = - 1 #self.comptr_row - self.player_row
-            #self.reward = self.player_row - self.comptr_row
+            if self.player_row > self.comptr_row: # win
+                self.rewardP = 1
+                self.rewardC = -1
+            elif self.player_row < self.comptr_row: # defeated
+                self.rewardP = - 1
+                self.rewardC = 1
+            else: # draw
+                self.rewardP = -1
+                self.rewardC = -1
 
         # update time
-        self.time += 1
+        if self.time < self.max_time - 1:
+            self.time += 1
+        else:
+            self.terminal = True
+            self.rewardP = -1
+            self.rewardC = -1
 
     def draw(self):
         # draw player
@@ -131,18 +151,22 @@ class Slipstream:
         if self.player_energy > 0:
             val = min(self.player_energy, self.screen_n_rows - 1)
             for i in range(val):
+                self.screen[i, self.screen_n_cols - 2, self.time] = 0.75
+        if self.comptr_energy > 0:
+            val = min(self.comptr_energy, self.screen_n_rows - 1)
+            for i in range(val):
                 self.screen[i, self.screen_n_cols - 1, self.time] = 0.25
 
     def observe(self):
         self.draw()
         if self.plot:
             self.update_plot()
-        #self.save_images()
-        return self.screen, self.reward, self.terminal
+        # self.save_images()
+        return self.screen, self.rewardP, self.rewardC, self.terminal
 
-    def step(self, action):
-        self.update(action)
-        return self.screen, self.reward, self.terminal
+    def step(self, actionP, actionC):
+        self.update(actionP, actionC)
+        return self.screen, self.rewardP, self.rewardC, self.terminal
 
     def reset(self):
         # reset screen
@@ -158,7 +182,8 @@ class Slipstream:
         self.comptr_col = np.random.randint(self.field_n_cols)
 
         # reset other variables
-        self.reward = 0
+        self.rewardP = 0
+        self.rewardC = 0
         self.terminal = False
         self.player_energy = 5
         self.comptr_energy = 6
@@ -175,5 +200,5 @@ class Slipstream:
         plt.imshow(self.screen[:, :, self.time])
         plt.tick_params(labelbottom=False, labelleft=False, labelright=False, labeltop=False, bottom=False, left=False, right=False, top=False)
         #plt.show()
-        plt.savefig("./%d.png"%self.img_cnt)
+        plt.savefig("./gif14/%03d.png"%self.img_cnt)
         self.img_cnt += 1
