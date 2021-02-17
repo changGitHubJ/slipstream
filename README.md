@@ -15,7 +15,7 @@ Overview
 
 ## Usage
 
-1. start train.py
+1. start bash train.sh from terminal
 1. start test.py to check results
 
 ## Licence
