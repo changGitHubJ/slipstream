@@ -55,7 +55,7 @@ class DQNAgent:
         self.n_actions = len(self.enable_actions)
         self.gamma = 0.99
         self.minibatch_size = 64
-        self.replay_memory_size = 1000
+        self.replay_memory_size = 10
         self.learning_rate = 0.00025
         self.discount_factor = 0.9
         self.exploration = 0.1
@@ -147,6 +147,9 @@ class DQNAgent:
         self.train_on_batch(state_minibatch, action_minibatch, target_minibatch)
         self.sess.run(self.update_target_model)
 
+    def clear_experience(self):
+        self.D.clear()
+
     def train_on_batch(self, state_batch, action_batch, targets):
         self.sess.run(self.train, feed_dict={self.model_inputs: state_batch, self.inputs: action_batch, self.targets: targets})
 
@@ -173,5 +176,5 @@ class DQNAgent:
             if checkpoint and checkpoint.model_checkpoint_path:
                 self.saver.restore(self.sess, checkpoint.model_checkpoint_path)
 
-    def save_model(self):
-        self.saver.save(self.sess, os.path.join(self.model_dir, self.model_name))
+    def save_model(self, epoch):
+        self.saver.save(self.sess, os.path.join(self.model_dir + "_%d"%epoch, self.model_name))
