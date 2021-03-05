@@ -10,7 +10,7 @@ def main(trial):
 
     # environment, agent
     env = Slipstream(plot=False)
-    agent1 = DQNAgent([0, 1, 2, 3, 4], [env.screen_n_cols, env.screen_n_rows, env.max_time], env.name, "modelMcEｗan" + str(trial))
+    agent1 = DQNAgent([0, 1, 2, 3, 4], [env.screen_n_cols, env.screen_n_rows, env.max_time], env.name, "modelMcEwan" + str(trial))
     agent1.compile()
     agent2 = DQNAgent([0, 1, 2, 3, 4], [env.screen_n_cols, env.screen_n_rows, env.max_time], env.name, "modelPetacchi" + str(trial))
     agent2.compile()
